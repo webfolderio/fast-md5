@@ -6,15 +6,25 @@
  */
 package io.webfolder.fast.md5;
 
+import static java.lang.String.format;
+import static java.lang.System.exit;
 import static java.lang.System.getProperty;
 import static java.lang.System.load;
+import static java.nio.channels.Channels.newInputStream;
+import static java.nio.channels.FileChannel.open;
 import static java.nio.file.Files.copy;
 import static java.nio.file.Files.createTempFile;
+import static java.nio.file.Files.exists;
+import static java.nio.file.Files.isReadable;
+import static java.nio.file.LinkOption.NOFOLLOW_LINKS;
+import static java.nio.file.Paths.get;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.nio.file.StandardOpenOption.READ;
 import static java.util.Locale.ENGLISH;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigInteger;
 import java.nio.file.Path;
 import java.util.Arrays;
 
@@ -67,5 +77,38 @@ public class Md5 extends BlockHasher {
         }
         libFile.toFile().deleteOnExit();
         load(libFile.toAbsolutePath().toString());
+    }
+
+    public static void main(String[] args) {
+        if (args.length < 1) {
+            System.err.println("error: no input file");
+            exit(-1);
+            return;
+        }
+        Path file = get(args[0]);
+        if ( ! exists(file) ) {
+            System.err.println("error: file does not exist: " + args[0]);
+            exit(-1);
+            return;
+        }
+        if ( ! isReadable(file) ) {
+            System.err.println("error: file does not exist: " + args[0]);
+            exit(-1);
+            return;
+        }
+        Md5 md5 = new Md5();
+        int bufferSize = 1024 * 256;
+        try (InputStream is = newInputStream(open(file, NOFOLLOW_LINKS, READ))) {
+            final byte[] buffer = new byte[bufferSize];
+            int read;
+            while((read = is.read(buffer)) > 0) {
+                md5.update(buffer, 0, read);
+            }
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+        byte[] hash = md5.getHash();
+        String hexValue = format("%032x", new BigInteger(1, hash));
+        System.out.println(hexValue);
     }
 }
