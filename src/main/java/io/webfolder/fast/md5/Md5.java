@@ -106,6 +106,7 @@ public class Md5 extends BlockHasher {
             }
         } catch(IOException e) {
             e.printStackTrace();
+            exit(-2);
         }
         byte[] hash = md5.getHash();
         String hexValue = format("%032x", new BigInteger(1, hash));
