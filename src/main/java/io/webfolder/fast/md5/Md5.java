@@ -14,11 +14,25 @@ import java.nio.file.Path;
 public class Md5 {
 
     static {
-        ClassLoader cl = Md5.class.getClassLoader();
-        Path libFile;
         String os = getProperty("os.name").toLowerCase(ENGLISH);
         boolean win = os.contains("windows");
-        String lib = win ? "META-INF/fast-md5.dll" : "META-INF/libfast-md5.so";
+        if (win) {
+            loadLibrary("META-INF/fast-md5.dll");
+        } else {
+            try {
+                loadLibrary("META-INF/libfast-md5-debian.so");
+            } catch (Throwable t) {
+                // ignored
+            }
+            loadLibrary("META-INF/libfast-md5-rhel.so");
+        }
+    }
+
+    private static void loadLibrary(String lib) {
+        Path libFile;
+        ClassLoader cl = Md5.class.getClassLoader();
+        String os = getProperty("os.name").toLowerCase(ENGLISH);
+        boolean win = os.contains("windows");
         try (InputStream is = cl.getResourceAsStream(lib)) {
             libFile = createTempFile("libfast-md5", win ? ".dll" : ".so");
             copy(is, libFile, REPLACE_EXISTING);
