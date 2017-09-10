@@ -34,14 +34,14 @@ Java_io_webfolder_fast_md5_Md5_generate(JNIEnv *env, jclass klass,
   (*env)->ReleaseStringUTFChars(env, path, c_path);
 
   hFile = CreateFileW(filename,
-  				      GENERIC_READ,
-  				      FILE_SHARE_READ | FILE_SHARE_WRITE, // Important!
-  				                                          // Although we do not change the content of the file, we must pass FILE_SHARE_WRITE flag.
-  				                                          // Otherwise winapi return ERROR_SHARING_VIOLATION error code if file is already opened.
-  				      NULL,                               // https://stackoverflow.com/questions/10473442/why-cant-i-open-a-file-for-reading-if-theoretically-i-should-be-allowed
-                      OPEN_EXISTING,
-                      FILE_FLAG_SEQUENTIAL_SCAN,
-                      NULL);
+                        GENERIC_READ,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE, // Important!
+                                                            // Although we do not change the content of the file, we must pass FILE_SHARE_WRITE flag.
+                                                            // Otherwise winapi return ERROR_SHARING_VIOLATION error code if file is already opened for write.
+                        NULL,                               // https://stackoverflow.com/questions/10473442/why-cant-i-open-a-file-for-reading-if-theoretically-i-should-be-allowed
+                        OPEN_EXISTING,
+                        FILE_FLAG_SEQUENTIAL_SCAN,
+                        NULL);
 
   if (INVALID_HANDLE_VALUE == hFile) {
     return NULL;
