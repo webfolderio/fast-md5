@@ -3,9 +3,37 @@
 #include <windows.h>
 #include <Wincrypt.h>
 #include <wchar.h>
+#include <stdbool.h>
 
 #define BUFSIZE 32768
 #define MD5LEN 16
+
+static wchar_t* ToWinPath(JNIEnv *env, jstring path, bool dirSuffix);
+
+static wchar_t* ToWinPath(JNIEnv *env, jstring path, bool dirSuffix) {
+  jsize len = (*env)->GetStringLength(env, path), prefix = 0, suffix = 0;
+  const jchar* jstr = (*env)->GetStringChars(env, path, NULL);
+  while (len > 0 && jstr[len - 1] == L'\\') --len;  // trim trailing separators
+  if (len == 0) return NULL;
+  if (len >= (MAX_PATH - 12)) prefix = 4;  // prefix long paths by UNC marker
+  if (dirSuffix) suffix = 2;
+
+  wchar_t* pathBuf = (wchar_t*)malloc((prefix + len + suffix + 1) * sizeof(wchar_t));
+  if (pathBuf != NULL) {
+    if (prefix > 0) {
+      wcsncpy_s(pathBuf, prefix + 1, L"\\\\?\\", prefix);
+    }
+    wcsncpy_s(pathBuf + prefix, len + 1, (wchar_t*)jstr, len);
+    if (suffix > 0) {
+      wcsncpy_s(pathBuf + prefix + len, suffix + 1, L"\\*", suffix);
+    }
+    pathBuf[prefix + len + suffix] = L'\0';
+  }
+
+  (*env)->ReleaseStringChars(env, path, jstr);
+
+  return pathBuf;
+}
 
 /*
  * Class:     io_webfolder_fast_md5_Md5
@@ -25,13 +53,7 @@ Java_io_webfolder_fast_md5_Md5_generate(JNIEnv *env, jclass klass,
   DWORD cbHash = 0;
   CHAR rgbDigits[] = "0123456789abcdef";
 
-  const char *c_path = (char *)(*env)->GetStringUTFChars(env, path, NULL);
-
-  const size_t size = strlen(c_path) + 1;
-  LPCWSTR filename = malloc(sizeof(wchar_t) * (size + 1));
-  mbstowcs(filename, c_path, size);
-
-  (*env)->ReleaseStringUTFChars(env, path, c_path);
+  LPCWSTR filename = ToWinPath(env, path, false);
 
   hFile = CreateFileW(filename,
                         GENERIC_READ,
